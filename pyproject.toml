@@ -1,0 +1,14 @@
+[project]
+name = "halfdome-remapping-recovered"
+version = "0.1.0"
+description = "Recovered HalfDome Tinker08 calibration and paper HMF plots"
+requires-python = ">=3.12"
+dependencies = ["numpy>=2", "scipy>=1.15", "h5py>=3.12", "matplotlib>=3.9", "astropy>=7", "hmf>=3.5"]
+
+[project.optional-dependencies]
+notebook = ["ipykernel", "nbclient", "nbformat"]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,287 @@
+{
+  "catalogs": [
+    {
+      "seed": 100,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_100.hdf5",
+      "size": 15425622199,
+      "mtime_ns": 1721848417693187336,
+      "rows": 85224251,
+      "plot_slices": [
+        [
+          85214373,
+          85224251
+        ],
+        [
+          53448559,
+          56093808
+        ],
+        [
+          12486715,
+          13713208
+        ],
+        [
+          806333,
+          1003730
+        ]
+      ]
+    },
+    {
+      "seed": 102,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_102.hdf5",
+      "size": 15092452655,
+      "mtime_ns": 1721848441049023176,
+      "rows": 85267919,
+      "plot_slices": [
+        [
+          85257214,
+          85267919
+        ],
+        [
+          53487053,
+          56138597
+        ],
+        [
+          12506921,
+          13734742
+        ],
+        [
+          804038,
+          1001831
+        ]
+      ]
+    },
+    {
+      "seed": 104,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_104.hdf5",
+      "size": 15085937993,
+      "mtime_ns": 1721848461363223850,
+      "rows": 85231113,
+      "plot_slices": [
+        [
+          85219789,
+          85231113
+        ],
+        [
+          53442442,
+          56097357
+        ],
+        [
+          12484752,
+          13708230
+        ],
+        [
+          805263,
+          1003607
+        ]
+      ]
+    },
+    {
+      "seed": 106,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_106.hdf5",
+      "size": 15090054305,
+      "mtime_ns": 1721848471945069215,
+      "rows": 85254369,
+      "plot_slices": [
+        [
+          85244041,
+          85254369
+        ],
+        [
+          53479153,
+          56140359
+        ],
+        [
+          12484417,
+          13705332
+        ],
+        [
+          805230,
+          1003460
+        ]
+      ]
+    },
+    {
+      "seed": 108,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_108.hdf5",
+      "size": 15083226176,
+      "mtime_ns": 1721848482115642898,
+      "rows": 85215792,
+      "plot_slices": [
+        [
+          85205850,
+          85215792
+        ],
+        [
+          53425998,
+          56096702
+        ],
+        [
+          12489410,
+          13708283
+        ],
+        [
+          809075,
+          1007532
+        ]
+      ]
+    },
+    {
+      "seed": 110,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_110.hdf5",
+      "size": 15090811865,
+      "mtime_ns": 1721848494739719510,
+      "rows": 85258649,
+      "plot_slices": [
+        [
+          85248481,
+          85258649
+        ],
+        [
+          53464159,
+          56124276
+        ],
+        [
+          12493117,
+          13716568
+        ],
+        [
+          804929,
+          1002222
+        ]
+      ]
+    },
+    {
+      "seed": 112,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_112.hdf5",
+      "size": 15088649633,
+      "mtime_ns": 1721848505624704415,
+      "rows": 85246433,
+      "plot_slices": [
+        [
+          85235639,
+          85246433
+        ],
+        [
+          53461572,
+          56117317
+        ],
+        [
+          12491343,
+          13711620
+        ],
+        [
+          804942,
+          1001412
+        ]
+      ]
+    },
+    {
+      "seed": 114,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_114.hdf5",
+      "size": 15090498929,
+      "mtime_ns": 1721848515800838863,
+      "rows": 85256881,
+      "plot_slices": [
+        [
+          85247236,
+          85256881
+        ],
+        [
+          53477764,
+          56129857
+        ],
+        [
+          12480329,
+          13706472
+        ],
+        [
+          804435,
+          1003055
+        ]
+      ]
+    },
+    {
+      "seed": 116,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_116.hdf5",
+      "size": 15083937008,
+      "mtime_ns": 1721848528105444894,
+      "rows": 85219808,
+      "plot_slices": [
+        [
+          85210741,
+          85219808
+        ],
+        [
+          53439606,
+          56098007
+        ],
+        [
+          12483564,
+          13712767
+        ],
+        [
+          805474,
+          1004096
+        ]
+      ]
+    },
+    {
+      "seed": 118,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_118.hdf5",
+      "size": 15086939282,
+      "mtime_ns": 1721848538927582167,
+      "rows": 85236770,
+      "plot_slices": [
+        [
+          85226009,
+          85236770
+        ],
+        [
+          53452292,
+          56107956
+        ],
+        [
+          12480809,
+          13703985
+        ],
+        [
+          805404,
+          1003770
+        ]
+      ]
+    },
+    {
+      "seed": 120,
+      "path": "/global/cfs/cdirs/cmb/halfdome/full_res/halos/lightcone_120.hdf5",
+      "size": 15087687284,
+      "mtime_ns": 1721848549236314063,
+      "rows": 85240996,
+      "plot_slices": [
+        [
+          85230518,
+          85240996
+        ],
+        [
+          53473511,
+          56125634
+        ],
+        [
+          12492073,
+          13715600
+        ],
+        [
+          805432,
+          1003568
+        ]
+      ]
+    }
+  ],
+  "sample_columns": [
+    "redshift",
+    "log10_m_rfof",
+    "log10_m200m"
+  ],
+  "sample_per_bin": 32,
+  "particle_mass": 19487254007.799496,
+  "elapsed_seconds": 74.81791043496924
+}

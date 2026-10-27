@@ -1,0 +1,13 @@
+{
+  "data/release_samples.npz": "2f9da841ca85aa6de617e1f35d5d366fdb680b5cfa9b055f6a6c460904afbda2",
+  "data/release_final_validation.npz": "b6515e336471f08e99a4494b97a856877e84b3ebc0f573e8a038c9f3ea2fb760",
+  "data/release_tail_samples.json": "5f21d0e17b24bbed064bd15e00889a55f53fb980d6c812122ad51fa250ee1513",
+  "data/release_tail_samples.npz": "a948b175c0023fb8472c2e21504e9f8989c29581e1837e47c1d941b699a4c12b",
+  "data/release_final_validation.json": "30c815f93e26a193e110071bfd093e280ebfab8efd614d0e4627afd764417893",
+  "data/release_samples.json": "45ddc5125485b3dc30cf33e3d7e9d5156b89c9cd47a3fca9bdc1c9aa22c1f1c4",
+  "data/recovered-grid/conversion_grid.npy": "3f7b6064030a5ca879c8cce7cf8c20bfc2a1bc17d5d1a9518d2963f93059ee46",
+  "data/recovered-grid/conversion_grid_m.npy": "e5f18915880e1a0e19a77baaf26a01997040272f3cf792591fc1a9ef58c0a9f6",
+  "data/recovered-grid/conversion_grid_z.npy": "41295f2565893c0eea3430b9c4e3849e9f0d17ddae6fb0001c3bbcab77d4100b",
+  "data/recovered-grid/provenance.json": "e99396df26ab47fd7cde80abb110c8eb3f7cbd595eb916abd095e0307b0ed36b",
+  "provenance/perlmutter-remapping-history.json": "7536df74c2e583053075ec7855f569653c391952605b90e72d54f5ff7003ee85"
+}
