@@ -7,6 +7,7 @@ catalog pairs are a distinct product and carry their validation and support.
 from dataclasses import dataclass, field
 import json
 import os
+from numbers import Integral
 from pathlib import Path
 from uuid import uuid4
 
@@ -35,6 +36,10 @@ class MassRemapping:
         self.redshift = np.asarray(self.redshift, dtype=float)
         self.log_mass = np.asarray(self.log_mass, dtype=float)
         self.correction = np.asarray(self.correction, dtype=float)
+        if self.redshift.ndim != 1 or self.log_mass.ndim != 1:
+            raise ValueError('Grid axes must be one-dimensional')
+        if not (np.isfinite(self.redshift).all() and np.isfinite(self.log_mass).all()):
+            raise ValueError('Grid axes must be finite')
         if self.correction.shape != (len(self.redshift), len(self.log_mass)):
             raise ValueError('Correction shape must be (redshift, log_mass)')
         if min(len(self.redshift), len(self.log_mass)) < 4:
@@ -45,21 +50,33 @@ class MassRemapping:
             raise ValueError('Correction grid must be finite')
         self._spline = RectBivariateSpline(self.redshift, self.log_mass, self.correction, s=0)
 
+    def supported(self, redshift, log10_m_rfof):
+        """Mask using the same physical and empirical limits as conversion."""
+        z, lm = np.broadcast_arrays(np.asarray(redshift, dtype=float), np.asarray(log10_m_rfof, dtype=float))
+        inside = np.isfinite(z) & np.isfinite(lm) & (z >= 0) & (z <= 4)
+        inside &= (lm >= self.log_mass[0]) & (lm <= self.log_mass[-1])
+        support = self.provenance.get('support')
+        if support:
+            upper = np.interp(z, support['redshift'], support['upper_log_mass'])
+            inside &= lm <= upper
+        return inside
+
     def log10_m200m(self, redshift, log10_m_rfof, *, allow_extrapolation=False):
         z, lm = np.broadcast_arrays(np.asarray(redshift, dtype=float), np.asarray(log10_m_rfof, dtype=float))
         if not (np.all(np.isfinite(z)) and np.all(np.isfinite(lm))):
             raise ValueError('Masses and redshifts must be finite')
-        if not allow_extrapolation:
-            if np.any((z < 0) | (z > 4) | (lm < self.log_mass[0]) | (lm > self.log_mass[-1])):
-                raise ValueError('Input outside the historical calibrated domain; pass allow_extrapolation=True to use historical boundary clamping')
-            support = self.provenance.get('support')
-            if support:
-                upper = np.interp(z, support['redshift'], support['upper_log_mass'])
-                if np.any(lm > upper):
-                    raise ValueError('Mass above the released-catalog recovery support; original grid required for unvalidated extrapolation')
+        if not allow_extrapolation and not np.all(self.supported(z, lm)):
+            raise ValueError('Input outside the calibrated range; pass allow_extrapolation=True to use unvalidated continuation and boundary clamping')
         # FITPACK clamps outside the tabulated axes, as in the original code.
         corr = self._spline.ev(z.ravel(), lm.ravel()).reshape(z.shape)
-        return lm * (1.0 + corr)
+        with np.errstate(over='raise', invalid='raise'):
+            try:
+                transformed = lm * (1.0 + corr)
+            except FloatingPointError as exc:
+                raise ValueError('Converted log masses must be finite') from exc
+        if not np.isfinite(transformed).all():
+            raise ValueError('Converted log masses must be finite')
+        return transformed
 
     def save(self, directory):
         directory = Path(directory)
@@ -86,9 +103,16 @@ def fit_released_pairs(samples, *, regularization=1e-6, support_margin=0.25):
     mistaken for recovery of the original high-mass extrapolation.
     """
     samples = np.asarray(samples, dtype=float)
-    if samples.ndim != 2 or samples.shape[1] != 3 or not np.isfinite(samples).all():
-        raise ValueError('Expected finite N x 3 paired samples')
+    if samples.ndim != 2 or samples.shape[1] != 3 or not len(samples) or not np.isfinite(samples).all():
+        raise ValueError('Expected nonempty finite N x 3 paired samples')
+    if not np.isfinite(regularization) or regularization <= 0:
+        raise ValueError('Regularization must be finite and positive')
+    if not np.isfinite(support_margin) or support_margin < 0:
+        raise ValueError('Support margin must be finite and nonnegative')
     z_grid, m_grid = historical_axes()
+    if np.any((samples[:, 0] < 0) | (samples[:, 0] > 4) |
+              (samples[:, 1] < m_grid[0]) | (samples[:, 1] > m_grid[-1])):
+        raise ValueError('Training samples must lie in the historical calibrated domain')
     zero = RectBivariateSpline(z_grid, m_grid, np.zeros((len(z_grid), len(m_grid))))
     knots = zero.get_knots()
     coords = np.column_stack((np.clip(samples[:, 0], z_grid[0], z_grid[-1]),
@@ -128,7 +152,9 @@ def fit_released_pairs(samples, *, regularization=1e-6, support_margin=0.25):
 
 
 def validate_pairs(mapping, samples):
-    samples = np.asarray(samples)
+    samples = np.asarray(samples, dtype=float)
+    if samples.ndim != 2 or samples.shape[1] != 3 or not len(samples) or not np.isfinite(samples).all():
+        raise ValueError('Expected nonempty finite N x 3 validation samples')
     predicted = mapping.log10_m200m(samples[:, 0], samples[:, 1], allow_extrapolation=True)
     relative = np.expm1(np.log(10) * (predicted - samples[:, 2]))
     absolute = np.abs(relative)
@@ -138,18 +164,17 @@ def validate_pairs(mapping, samples):
               'max_absolute_relative_mass_error': float(absolute.max())}
     worst = int(np.argmax(absolute))
     result['worst_input'] = samples[worst, :2].tolist()
-    support = mapping.provenance.get('support')
-    if support:
-        upper = np.interp(samples[:, 0], support['redshift'], support['upper_log_mass'])
-        inside = samples[:, 1] <= upper
-        result['supported_rows'] = int(inside.sum())
-        result['supported_fraction'] = float(inside.mean())
-        result['supported_max_absolute_relative_mass_error'] = float(absolute[inside].max()) if inside.any() else None
+    inside = mapping.supported(samples[:, 0], samples[:, 1])
+    result['supported_rows'] = int(inside.sum())
+    result['supported_fraction'] = float(inside.mean())
+    result['supported_max_absolute_relative_mass_error'] = float(absolute[inside].max()) if inside.any() else None
     return result
 
 
 def apply_hdf5(mapping, source, destination, *, chunk_size=100_000, allow_extrapolation=False):
     """Create a new mass-only sidecar with row correspondence to the input."""
+    if not isinstance(chunk_size, Integral) or isinstance(chunk_size, bool) or chunk_size <= 0:
+        raise ValueError('Chunk size must be a positive integer')
     source, destination = Path(source), Path(destination)
     if source.resolve() == destination.resolve():
         raise ValueError('Destination must be a separate sidecar')
@@ -180,4 +205,11 @@ def _write_sidecar(mapping, source, destination, chunk_size, allow_extrapolation
             for start in range(0, len(z), chunk_size):
                 end = min(start + chunk_size, len(z))
                 values = mapping.log10_m200m(z[start:end], lm[start:end], allow_extrapolation=allow_extrapolation)
-                masses[start:end] = 10**values
+                with np.errstate(over='raise', invalid='raise', under='ignore'):
+                    try:
+                        linear_mass = 10**values
+                    except FloatingPointError as exc:
+                        raise ValueError('Converted linear masses must be finite and positive') from exc
+                if not np.isfinite(linear_mass).all() or np.any(linear_mass <= 0):
+                    raise ValueError('Converted linear masses must be finite and positive')
+                masses[start:end] = linear_mass

@@ -66,3 +66,76 @@ def test_unsupported_mass_does_not_leave_partial_catalog(tmp_path):
         apply_hdf5(mapping, src, dst, chunk_size=1)
     assert not dst.exists()
     assert not list(tmp_path.glob('*.partial-*'))
+
+
+@pytest.mark.parametrize('chunk_size', [-1, 0, 1.5, True])
+def test_invalid_chunk_size_never_writes_a_catalog(tmp_path, chunk_size):
+    z, m = historical_axes()
+    mapping = MassRemapping(z, m, np.zeros((len(z), len(m))))
+    src, dst = tmp_path/'input.h5', tmp_path/'output.h5'
+    with h5py.File(src, 'w') as f:
+        f['redshift'], f['log10_m_rfof'] = [1, 2], [13, 14]
+    before = src.read_bytes()
+    with pytest.raises(ValueError, match='positive integer'):
+        apply_hdf5(mapping, src, dst, chunk_size=chunk_size)
+    assert src.read_bytes() == before
+    assert not dst.exists()
+    assert not list(tmp_path.glob('*.partial-*'))
+
+
+def test_report_support_agrees_with_conversion_domain():
+    z, m = historical_axes()
+    mapping = MassRemapping(z, m, np.zeros((len(z), len(m))), {
+        'support': {'redshift': z.tolist(), 'upper_log_mass': [17.0]*len(z)}})
+    samples = np.array([[1, 13, 13], [5, 13, 13], [1, 12, 12], [1, 17, 17]])
+    report = validate_pairs(mapping, samples)
+    assert report['supported_rows'] == 1
+    np.testing.assert_array_equal(mapping.supported(samples[:, 0], samples[:, 1]), [True, False, False, False])
+    for row in samples[1:]:
+        with pytest.raises(ValueError):
+            mapping.log10_m200m(row[0], row[1])
+
+
+@pytest.mark.parametrize('bad_mass', [1000.0, -1000.0])
+def test_unrepresentable_linear_mass_cannot_create_sidecar(tmp_path, bad_mass):
+    z, m = historical_axes()
+    mapping = MassRemapping(z, m, np.zeros((len(z), len(m))))
+    src, dst = tmp_path/'input.h5', tmp_path/'output.h5'
+    with h5py.File(src, 'w') as f:
+        f['redshift'], f['log10_m_rfof'] = [1], [bad_mass]
+    with pytest.raises(ValueError, match='finite and positive'):
+        apply_hdf5(mapping, src, dst, allow_extrapolation=True)
+    assert not dst.exists()
+    assert not list(tmp_path.glob('*.partial-*'))
+
+
+@pytest.mark.parametrize('samples,kwargs', [
+    (np.empty((0, 3)), {}),
+    ([[1, 13, 13]], {'regularization': 0}),
+    ([[1, 13, 13]], {'regularization': -1}),
+    ([[1, 13, 13]], {'regularization': np.nan}),
+    ([[1, 13, 13]], {'support_margin': -0.1}),
+    ([[5, 13, 13]], {}),
+    ([[1, 0, 13]], {}),
+])
+def test_invalid_training_requests_fail_before_solving(samples, kwargs):
+    with pytest.raises(ValueError):
+        fit_released_pairs(samples, **kwargs)
+
+
+def test_training_provenance_records_actual_seeds(tmp_path, monkeypatch):
+    import json
+    import run as cli
+    import sys
+
+    base, tail, output = tmp_path/'base.npz', tmp_path/'tail.npz', tmp_path/'grid'
+    np.savez(base, sample_100=[[1, 13, 13]], sample_102=[[2, 13, 13]])
+    np.savez(tail, sample_100=[[1, 14, 14]], sample_104=[[1, 15, 15]], sample_106=[[3, 13, 13]])
+    z, m = historical_axes()
+    def fit(training, **kwargs):
+        np.testing.assert_array_equal(training, [[1, 13, 13], [3, 13, 13]])
+        return MassRemapping(z, m, np.zeros((len(z), len(m))))
+    monkeypatch.setattr(cli, 'fit_released_pairs', fit)
+    monkeypatch.setattr(sys, 'argv', ['run.py', 'recover-grid', '--samples', str(base), '--tail-samples', str(tail), '--output', str(output)])
+    cli.main()
+    assert json.loads((output/'provenance.json').read_text())['training_seeds'] == [100, 106]

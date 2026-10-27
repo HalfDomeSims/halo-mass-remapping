@@ -29,14 +29,22 @@ def main():
     if args.command == 'recover-grid':
         data = np.load(args.samples)
         training = [data['sample_100']]
+        training_seeds = [100]
         if args.tail_samples:
             tail = np.load(args.tail_samples)
-            training.extend(tail[k] for k in tail.files if k.startswith('sample_') and k not in ('sample_102', 'sample_104'))
+            for key in sorted(tail.files):
+                if not key.startswith('sample_'):
+                    continue
+                seed = int(key.removeprefix('sample_'))
+                if seed in (100, 102, 104) or not len(tail[key]):
+                    continue
+                training.append(tail[key])
+                training_seeds.append(seed)
         training = np.concatenate(training)
         mapping = fit_released_pairs(training, regularization=args.regularization)
         mapping.provenance.update({
             'sample_sha256': hashlib.sha256(args.samples.read_bytes()).hexdigest(),
-            'training_seeds': [100] + ([106, 108, 110, 112, 114, 116, 118, 120] if args.tail_samples else []),
+            'training_seeds': sorted(training_seeds),
             'development_validation_seed': 102,
             'training_validation': validate_pairs(mapping, training),
             'independent_validation': validate_pairs(mapping, data['sample_102']),

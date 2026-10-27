@@ -21,7 +21,8 @@ def descending_bound(dataset, value, strict=False):
     lo, hi = 0, len(dataset)
     while lo < hi:
         mid = (lo + hi) // 2
-        if dataset[mid] < value if strict else dataset[mid] <= value:
+        matches = dataset[mid] < value if strict else dataset[mid] <= value
+        if matches:
             hi = mid
         else:
             lo = mid + 1
@@ -29,6 +30,10 @@ def descending_bound(dataset, value, strict=False):
 
 
 def stratified_sample(f, per_bin=32, chunk_size=1_000_000, seed=0, min_log_mass=None):
+    if not isinstance(per_bin, (int, np.integer)) or per_bin <= 0:
+        raise ValueError('Samples per bin must be a positive integer')
+    if not isinstance(chunk_size, (int, np.integer)) or chunk_size <= 0:
+        raise ValueError('Chunk size must be a positive integer')
     rng = np.random.default_rng(seed)
     kept = np.empty((0, 5), dtype=np.float64)
     for start in range(0, len(f['redshift']), chunk_size):
@@ -64,7 +69,9 @@ def histograms(f):
     calibrated = raw.copy()
     slices = []
     z = f['redshift']
-    probes = z[np.linspace(0, len(z) - 1, 1000, dtype=int)]
+    if not len(z):
+        return raw, calibrated, [[0, 0] for _ in Z_LEFT]
+    probes = z[np.unique(np.linspace(0, len(z) - 1, 1000, dtype=int))]
     if not np.all(np.diff(probes) <= 0):
         raise ValueError('Expected catalog sorted by decreasing redshift')
     for i, left in enumerate(Z_LEFT):
@@ -114,6 +121,7 @@ def main():
                         raw_counts=raw, calibrated_counts=calibrated)
     metadata = {'catalogs': records, 'sample_columns': ['redshift', 'log10_m_rfof', 'log10_m200m'],
                 'sample_per_bin': args.per_bin, 'particle_mass': M0 * 1e10,
+                'sample_seeds': args.sample_seeds, 'min_sample_log_mass': args.min_sample_log_mass,
                 'elapsed_seconds': time.monotonic()-start}
     (args.output / 'release_samples.json').write_text(json.dumps(metadata, indent=2) + '\n')
     print(json.dumps({'output': str(args.output), 'elapsed': metadata['elapsed_seconds']}), flush=True)

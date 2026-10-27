@@ -51,6 +51,10 @@ and training identities are in
 * Numerical tests check the log-mass convention against a known analytic result,
   boundary behavior, recovery of a known independent mapping, HDF5 row alignment
   and source preservation, partial-output cleanup, and the final released seed.
+* Input and reporting checks reject invalid chunk sizes and unrepresentable
+  masses, use the same domain mask for conversion and validation, and record
+  the training seeds actually loaded. Sampling tests check slice boundaries
+  and independence from chunk boundaries.
 * The CLI creates a new aligned M200m sidecar. Production files were not opened
   for writing. The fnl=20 catalog was not processed.
 
