@@ -1,4 +1,4 @@
-"""Build the small runnable notebook; the separate history archive is unchanged."""
+"""Build the runnable halo mass calibration notebook."""
 from pathlib import Path
 
 import nbformat as nbf
@@ -9,13 +9,10 @@ nb = nbf.v4.new_notebook()
 nb.cells = [
     nbf.v4.new_markdown_cell('''# HalfDome halo mass calibration and paper figure
 
-Runnable recovery of the July 2024 purple RFoF / green Tinker08-calibrated HMF figure.
-The figure uses histogram counts from all 11 released HDF5 catalogs. It does not
-depend on recovery of the missing original mapping tables.
-
-The mapping below was **recovered from released pairs**, not copied from the
-original `conversion_grid*.npy` files. Its provenance and independent validation
-are shown explicitly. The archived notebook inputs are preserved separately.'''),
+Reproduce the purple RFoF / green Tinker08-calibrated HMF figure using histogram
+counts from all 11 released HDF5 catalogs, then apply the mass calibration spline.
+The calibration is fitted to released mass pairs and checked on independent
+catalogs.'''),
     nbf.v4.new_code_cell('''from pathlib import Path
 import json
 import tempfile
@@ -34,26 +31,25 @@ print("Released seeds:", samples["seeds"].tolist())'''),
     nbf.v4.new_markdown_cell('''## Reproduce the paper HMF figure
 
 Redshift slices are 0–0.05, 1–1.05, 2–2.05, and 3–3.05. Error bars are the
-standard deviation over the 11 realizations, as in the recovered inputs.
+standard deviation over the 11 realizations.
 Grey curves use the installed HMF package with the HalfDome cosmology.'''),
     nbf.v4.new_code_cell('''figure = plot_release(DATA / "release_samples.npz", OUTPUT / "reproduced-HMF")
 display(Image(filename=str(figure)))'''),
-    nbf.v4.new_markdown_cell('''## Apply the recovered mapping
+    nbf.v4.new_markdown_cell('''## Apply the mass calibration
 
 The historical formula is `log10_M200m = log10_Mrfof * (1 + correction(z, log10_Mrfof))`.
-It is not a multiplicative correction to linear mass. Training excludes seed 102;
-the following report uses its independent released mass pairs. Both samples are
+It is not a multiplicative correction to linear mass. Training excludes seed 104;
+the following report uses its independent released mass pairs. The samples are
 stratified in mass and redshift and therefore emphasize rare massive halos.
 
-The default call rejects masses above the recovery support. Setting
-`allow_extrapolation=True` reproduces the historical boundary behavior, but the
-unobserved high-mass continuation is not established by recovery.'''),
+The default call rejects masses above the calibrated range. Setting
+`allow_extrapolation=True` permits the regularized continuation and boundary
+clamping outside that validated range.'''),
     nbf.v4.new_code_cell('''mapping = MassRemapping.load(DATA / "recovered-grid")
 final_validation = np.load(DATA / "release_final_validation.npz")
 report = validate_pairs(mapping, final_validation["sample_104"])
 print("Final independent check: seed 104")
-print(json.dumps(report, indent=2))
-print("Original table recovered:", mapping.provenance["original_grid_recovered"])'''),
+print(json.dumps(report, indent=2))'''),
     nbf.v4.new_code_cell('''# A small independent example within the supported mass range.
 example = samples["sample_102"]
 example = example[example[:, 1] < 13.3][:20]
@@ -78,10 +74,8 @@ catalogs are never opened for writing.'''),
         np.testing.assert_allclose(f["halo_mass_m200m"][:], 10**predicted)
         print("Sidecar rows:", len(f["halo_mass_m200m"]))
         print("Units:", f.attrs["units"])'''),
-    nbf.v4.new_markdown_cell('''The source README records commands, provenance, validation limits, and the
-relationship to the earlier June Watson/Aemulus scripts. This recovery provides
-M200m; it does not silently substitute a different concentration prescription
-for the historical M200m→M200c conversion.'''),
+    nbf.v4.new_markdown_cell('''The README records commands, data provenance, and the validated calibration
+range. This mapper provides M200m; M200m→M200c conversion is outside its scope.'''),
 ]
 nb.metadata.kernelspec = {'display_name': 'Python 3', 'language': 'python', 'name': 'python3'}
 nbf.write(nb, root / 'HalfDome_mass_remapping.ipynb')

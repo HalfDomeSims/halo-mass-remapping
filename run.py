@@ -12,7 +12,7 @@ from remapping import MassRemapping, apply_hdf5, fit_released_pairs, validate_pa
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     commands = p.add_subparsers(dest='command', required=True)
-    fit = commands.add_parser('recover-grid', help='Recover a mapping from released mass pairs; not an original table')
+    fit = commands.add_parser('recover-grid', help='Fit a calibration spline to released mass pairs')
     fit.add_argument('--samples', type=Path, required=True)
     fit.add_argument('--output', type=Path, required=True)
     fit.add_argument('--regularization', type=float, default=1e-6)

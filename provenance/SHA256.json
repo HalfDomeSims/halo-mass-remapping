@@ -8,6 +8,5 @@
   "data/recovered-grid/conversion_grid.npy": "3f7b6064030a5ca879c8cce7cf8c20bfc2a1bc17d5d1a9518d2963f93059ee46",
   "data/recovered-grid/conversion_grid_m.npy": "e5f18915880e1a0e19a77baaf26a01997040272f3cf792591fc1a9ef58c0a9f6",
   "data/recovered-grid/conversion_grid_z.npy": "41295f2565893c0eea3430b9c4e3849e9f0d17ddae6fb0001c3bbcab77d4100b",
-  "data/recovered-grid/provenance.json": "e99396df26ab47fd7cde80abb110c8eb3f7cbd595eb916abd095e0307b0ed36b",
-  "provenance/perlmutter-remapping-history.json": "7536df74c2e583053075ec7855f569653c391952605b90e72d54f5ff7003ee85"
+  "data/recovered-grid/provenance.json": "e99396df26ab47fd7cde80abb110c8eb3f7cbd595eb916abd095e0307b0ed36b"
 }

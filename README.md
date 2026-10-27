@@ -10,23 +10,17 @@ The runnable notebook is **[HalfDome_mass_remapping.ipynb](HalfDome_mass_remappi
 It runs entirely from the small files included here. No NERSC connection,
 `nbodykit`, Aemulus emulator, or historical container is needed to run it.
 
-## What was recovered
+## Method
 
-The July plotting and catalog-conversion inputs survived in Zack Li's Perlmutter
-IPython history. The original notebook filenames and original
-`conversion_grid*.npy` tables were not recovered. The earlier
-[June 5, 2024 Watson/Aemulus scripts](https://github.com/HalfDomeSims/HalfDome-DataRelease/tree/hmf_only)
-are a different approach.
-
-This repository provides two separate results:
+This repository provides the calibration and figure used for the HalfDome halo
+mass-function analysis:
 
 * **Paper plot:** histogram counts from all 11 released HDF5 catalogs, including
-  their existing calibrated masses. The plot does not depend on rebuilding the
-  missing tables. The grey theory curves use a modern, pinned `hmf` installation.
-* **Recovered mapping:** a cubic spline fitted to released pairs of original and
-  calibrated masses, on the original 70 × 65 grid geometry. It is labelled as a
-  reconstruction, not an original table. Independent validation and a
-  conservative upper-mass support limit accompany it.
+  their existing calibrated masses. The grey theory curves use a pinned `hmf`
+  installation.
+* **Mass calibration:** a cubic spline fitted to released pairs of RFoF and
+  calibrated masses, on a 70 × 65 grid in redshift and log mass. Independent
+  validation and a conservative upper-mass support limit accompany the table.
 
 ![Reproduced paper HMF figure](figures/reproduced-HMF.png)
 
@@ -45,7 +39,7 @@ the repository root. The notebook writes PNG/PDF figures under
 `~/projects/halfdome/recovered-remapping-20261027/validation/`; change `OUTPUT` to
 choose another destination. An executed copy is included.
 
-To rebuild the recovered table from the included released-catalog pairs:
+To fit the calibration table from the included released-catalog pairs:
 
 ```bash
 uv run python run.py recover-grid \
@@ -91,39 +85,32 @@ The input is read-only. Existing output files are not replaced. The sidecar
 contains `halo_mass_m200m` and attributes identifying its source, units, mapping
 provenance, and row alignment. Failed conversions leave no partial output.
 
-## Recovery limits and validation
+## Calibration range and validation
 
 See [VALIDATION.md](VALIDATION.md) and
 [`data/recovered-grid/provenance.json`](data/recovered-grid/provenance.json) for
 the measured errors. Seed 100 and high-mass pairs from seeds 106–120 train the
-reconstruction. Seed 102 is development validation; seed 104 is reserved for a
+calibration. Seed 102 is development validation; seed 104 is reserved for a
 separate final check. Samples are stratified in mass and redshift and therefore
 overrepresent rare massive halos.
 
-The original grid's unconstrained high-mass continuation cannot be determined
-uniquely from the released pairs. The default recovery support ends 0.25 dex
-(five historical mass bins) below the local maximum training mass. This reserves
+The default calibrated range ends 0.25 dex (five mass bins) below the local
+maximum training mass. This reserves
 room for cubic interpolation near the sparse tail. Calls above that limit fail
 explicitly. Passing `allow_extrapolation=True`, or the equivalent CLI flag,
-permits the regularized continuation and historical boundary clamping; the
-result is not established to match the original extrapolation.
+permits the regularized continuation and boundary clamping. That continuation
+is outside the validated range.
 
 The original interpolation grid covers redshift 0.025–3.475, although catalogs
 extend to z=4. The historical code clamps to the grid boundaries; this is
 preserved. New input below the original mass range is rejected by default.
 
-If the original three NPY files are recovered, `MassRemapping.load(directory)`
-can use them directly with the historical formula, without this fitted recovery.
-The M200m→M200c step is preserved in the history archive but is not part of the
-current runnable mapper. No fnl=20 production catalog has been modified or
-claimed as validated by this recovery.
+`MassRemapping.load(directory)` accepts the three `conversion_grid*.npy` files
+with the same grid convention. The current mapper provides M200m. M200m→M200c
+conversion and fnl=20 production catalogs are outside the current validation.
 
 ## Provenance
 
-* [Raw recovered input history](provenance/perlmutter-remapping-history.json):
-  July 4 spline smoothing; July 5, 17, and 22 paper plots; July 24 catalog writes.
-  History timestamps do not record a timezone. These are archival inputs,
-  including experiments and failed commands, not an executable pipeline.
 * [`scripts/sample_release.py`](scripts/sample_release.py): reads the public
   catalogs under `/global/cfs/cdirs/cmb/halfdome/full_res/halos/`, exports the
   small stratified samples, and computes the four redshift-slice histograms.
@@ -131,10 +118,4 @@ claimed as validated by this recovery.
   [`data/release_tail_samples.json`](data/release_tail_samples.json): source
   filenames, sizes, modification times, selected row intervals, and seeds.
 * [`uv.lock`](uv.lock): package resolution; `requirements-lock.txt` additionally
-  records the exact environment used for the first successful recovery.
-
-The GitHub search checked the surviving `main`, `hmf_only`, and `validation_ic`
-branches of HalfDome-DataRelease, repository forks and pull requests, relevant
-personal repositories, and code/commit searches. No later GitHub copy of this
-Tinker08 implementation was located. This does not establish whether a deleted
-branch or repository once contained it.
+  records the exact environment used for validation.

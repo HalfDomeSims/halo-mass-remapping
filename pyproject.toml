@@ -1,7 +1,7 @@
 [project]
 name = "halfdome-remapping-recovered"
 version = "0.1.0"
-description = "Recovered HalfDome Tinker08 calibration and paper HMF plots"
+description = "HalfDome Tinker08 halo mass calibration and paper HMF plots"
 requires-python = ">=3.12"
 dependencies = ["numpy>=2", "scipy>=1.15", "h5py>=3.12", "matplotlib>=3.9", "astropy>=7", "hmf>=3.5"]
 
