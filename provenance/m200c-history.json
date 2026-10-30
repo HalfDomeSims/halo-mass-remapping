@@ -1,0 +1,14 @@
+{
+  "source_database": "~/.ipython/profile_default/history.sqlite",
+  "session": 749,
+  "inputs": [
+    {
+      "line": 96,
+      "source": "import h5py\nimport gc, sys\nimport numpy as np\nimport pyccl\nimport scipy.interpolate \nfrom nbodykit.lab import BigFileCatalog\nimport time\nfrom scipy.interpolate import RectBivariateSpline\nfrom scipy.interpolate import RegularGridInterpolator\n\n\noutdir = \"/pscratch/sd/x/xzackli/hd/halos/\"\ncatdir = '/global/cfs/cdirs/cmb/data/halfdome/stampede2_3750Mpch_6144cube/final_res/3750Mpc_2048node_seed_%d/rfof_proc131072_nc6144_size3750_nsteps60lin_ldr0_rcvfalse_fstnone_pnf2_lnf2_s%d_dhf1.0000_tiled0.20_fll_elllim_10000_npix_8192_rfofkdt_8'\n\ntype1=\"matter\"\ndelta1=200\ntype2=\"critical\"\ndelta2=200\nidef = pyccl.halos.MassDef(delta1, type1, c_m_relation=\"Bhattacharya13\")\nodef = pyccl.halos.MassDef(delta2, type2, c_m_relation=\"Bhattacharya13\")\n\n\n# use the Half Dome cosmology\ncosmology   = pyccl.Cosmology(Omega_c=0.2603, Omega_b=0.0486, h=0.6774, sigma8=0.8159, n_s=0.9667, \n                              transfer_function=\"boltzmann_camb\")\n\n# grid in logm\n\nlogm_grid = np.linspace(12, 16.5, 200)\nlog1pz_grid = np.linspace(np.log(1), np.log(5.0), 30)\n\nresults = np.zeros( (len(logm_grid), len(log1pz_grid)) ) \n\nfor im, lm in enumerate(logm_grid):\n    for iz, l1pz in enumerate(log1pz_grid):\n\n        mass_in_Msun = 10**lm\n        scale_factor = np.exp(-l1pz)\n        m200m = idef.translate_mass(cosmology, mass_in_Msun, scale_factor, odef)\n        results[im, iz] = np.log10(m200m)\n\ndef get_resampled_masses(redshift, log10_m):\n    data_dir = \"/pscratch/sd/x/xzackli/hd/HalfDome-DataRelease/\"\n    conversion_grid_ex = np.load(f\"{data_dir}/data/conversion_grid.npy\")\n    conv_z_grid = np.load(f\"{data_dir}/data/conversion_grid_z.npy\")\n    conv_lm_grid = np.load(f\"{data_dir}/data/conversion_grid_m.npy\")\n    conv_func = RectBivariateSpline(conv_z_grid, conv_lm_grid, conversion_grid_ex, s=0)\n    corr = conv_func(redshift, log10_m, grid=False)\n    tinker_lm = (1 + corr) * log10_m\n    return tinker_lm"
+    },
+    {
+      "line": 98,
+      "source": "seeds_fastpm = np.arange(100,122,2)\n# seed = seeds_fastpm[1]\n\nfor seed in seeds_fastpm:\n    fname = f'{outdir}/lightcone_{seed}.hdf5'\n\n    # append resampled mass\n    with h5py.File(fname, 'r') as f:\n        redshift = f[\"redshift\"][:]\n        log10_m = f[\"log10_m\"][:]\n\n    interp = RegularGridInterpolator((logm_grid, log1pz_grid), results)\n    tinker_lm = get_resampled_masses(redshift, log10_m)\n    x = np.vstack( [tinker_lm, np.log(1+redshift)] ).T\n    lm200c = interp( x )\n    \n    with h5py.File(fname, \"a\") as f:\n        if \"halo_mass\" in f.keys():\n            del f[\"halo_mass\"]\n            f[\"halo_mass_m200m\"] = 10**tinker_lm\n            f[\"halo_mass_m200c\"] = 10**lm200c"
+    }
+  ]
+}

@@ -58,5 +58,53 @@ and training identities are in
 * The CLI creates a new aligned M200m sidecar. Production files were not opened
   for writing. The fnl=20 catalog was not processed.
 
-See the GitHub Actions test run for ongoing numerical checks. M200m→M200c
-conversion is outside the current mapper's scope.
+See the GitHub Actions test run for ongoing numerical checks.
+
+## M200c extension — October 29, 2026
+
+The July 24, 2024 IPython session 749, input 96, supplies the M200m→M200c
+recipe: an NFW conversion using CCL's Bhattacharya13 concentration relation,
+evaluated on 200 log-mass points from 12 to 16.5 and 30 ln(1+z) points from
+0 to ln(5). The final catalog write is input 98. These inputs are preserved in
+[`provenance/m200c-history.json`](provenance/m200c-history.json).
+
+The original grid was rebuilt using CCL 3.3.6 and CAMB 2.0.5, retaining the
+release's numerical convention of passing Msun/h values directly to CCL's
+Msun interface without h rescaling. This is explicitly a reproduction of the
+released masses. The rebuild is close to, but not bitwise identical to, the
+historical conversion. No fit to M200c catalog values was performed.
+
+Fresh four-column samples retain the released RFoF, M200m, M200c, and redshift
+values from seeds 102 and 104. Each uses the same reservoir selection (32
+halos per 0.05-redshift × 0.05-dex bin) as the existing sampler. The conversion
+uses the stored float32 redshifts in the historical `ln(1+z)` calculation.
+Only read access was used on the public catalogs.
+
+| Independent check: seed 104 | Result |
+| --- | ---: |
+| Paired halos checked | 76,980 |
+| Pairs inside default RFoF calibration range | 76,810 (99.779%) |
+| M200m→M200c maximum relative mass error, all pairs | 2.47 × 10⁻⁶ (2.47 ppm) |
+| RFoF→M200c median relative mass error, all pairs | 4.79 × 10⁻⁷ |
+| RFoF→M200c 99th percentile, all pairs | 1.91 × 10⁻⁶ |
+| RFoF→M200c maximum inside default support | 4.27 × 10⁻⁶ (4.27 ppm) |
+| RFoF→M200c maximum including unsupported tail | 2.10 × 10⁻³ (0.210%) |
+
+Seed 102 provides an additional 77,238 pairs: the conversion-only maximum is
+2.60 ppm, and the full-chain supported maximum is 2.45 ppm. The unsupported
+RFoF tail remains excluded by default. The M200c interpolation table never
+extrapolates, including when RFoF extrapolation is explicitly requested.
+
+[`data/m200c-validation.json`](data/m200c-validation.json) records both checks,
+sample and grid hashes, and the complete conversion provenance. The M200m grid
+and its original validation data have not changed. The original paper plot
+continues to use M200m.
+
+New regression checks cover the independent released M200c sample, scalar and
+broadcast inputs, table limits, redshift evolution, M200c/both sidecar selection,
+source preservation, row alignment, provenance, CLI selection, and cleanup when
+a later chunk cannot be converted. Runtime conversion uses the bundled table;
+the optional CCL dependency is required only for regeneration.
+
+The extended suite passes all 36 tests, and the updated notebook executes
+successfully, including its M200c validation and two-column HDF5 sidecar example.

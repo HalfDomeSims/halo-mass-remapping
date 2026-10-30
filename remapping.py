@@ -86,6 +86,17 @@ class MassRemapping:
         np.save(directory / 'conversion_grid_m.npy', self.log_mass)
         (directory / 'provenance.json').write_text(json.dumps(self.provenance, indent=2) + '\n')
 
+    def log10_m200c(self, redshift, log10_m_rfof, *, allow_extrapolation=False):
+        """Apply RFoF -> M200m, then the released M200m -> M200c conversion.
+
+        The extrapolation option applies to the RFoF calibration only. The
+        M200c conversion always requires inputs inside its own table.
+        """
+        from mass_definition import released_log10_m200c
+        lm = self.log10_m200m(redshift, log10_m_rfof,
+                             allow_extrapolation=allow_extrapolation)
+        return released_log10_m200c(redshift, lm)
+
     @classmethod
     def load(cls, directory):
         directory = Path(directory)
@@ -171,10 +182,13 @@ def validate_pairs(mapping, samples):
     return result
 
 
-def apply_hdf5(mapping, source, destination, *, chunk_size=100_000, allow_extrapolation=False):
+def apply_hdf5(mapping, source, destination, *, chunk_size=100_000, allow_extrapolation=False,
+               mass_definition='200m'):
     """Create a new mass-only sidecar with row correspondence to the input."""
     if not isinstance(chunk_size, Integral) or isinstance(chunk_size, bool) or chunk_size <= 0:
         raise ValueError('Chunk size must be a positive integer')
+    if mass_definition not in ('200m', '200c', 'both'):
+        raise ValueError('Mass definition must be 200m, 200c, or both')
     source, destination = Path(source), Path(destination)
     if source.resolve() == destination.resolve():
         raise ValueError('Destination must be a separate sidecar')
@@ -182,14 +196,14 @@ def apply_hdf5(mapping, source, destination, *, chunk_size=100_000, allow_extrap
         raise FileExistsError(destination)
     temporary = destination.with_name(destination.name + '.partial-' + uuid4().hex)
     try:
-        _write_sidecar(mapping, source, temporary, chunk_size, allow_extrapolation)
+        _write_sidecar(mapping, source, temporary, chunk_size, allow_extrapolation, mass_definition)
         # Link atomically without ever replacing an existing destination.
         os.link(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)
 
 
-def _write_sidecar(mapping, source, destination, chunk_size, allow_extrapolation):
+def _write_sidecar(mapping, source, destination, chunk_size, allow_extrapolation, mass_definition):
     with h5py.File(source, 'r') as src:
         raw_name = 'log10_m_rfof' if 'log10_m_rfof' in src else 'log10_m'
         z, lm = src['redshift'], src[raw_name]
@@ -201,15 +215,24 @@ def _write_sidecar(mapping, source, destination, chunk_size, allow_extrapolation
             dst.attrs['mapping_provenance'] = json.dumps(mapping.provenance)
             dst.attrs['row_alignment'] = 'Same row order and row count as source_catalog'
             dst.attrs['allow_extrapolation'] = allow_extrapolation
-            masses = dst.create_dataset('halo_mass_m200m', shape=lm.shape, dtype='f8')
+            dst.attrs['mass_definition'] = mass_definition
+            definitions = ('200m', '200c') if mass_definition == 'both' else (mass_definition,)
+            if '200c' in definitions:
+                from mass_definition import released_log10_m200c, m200c_provenance
+                dst.attrs['m200c_conversion_provenance'] = json.dumps(m200c_provenance())
+            masses = {d: dst.create_dataset(f'halo_mass_m{d}', shape=lm.shape, dtype='f8')
+                      for d in definitions}
             for start in range(0, len(z), chunk_size):
                 end = min(start + chunk_size, len(z))
-                values = mapping.log10_m200m(z[start:end], lm[start:end], allow_extrapolation=allow_extrapolation)
-                with np.errstate(over='raise', invalid='raise', under='ignore'):
-                    try:
-                        linear_mass = 10**values
-                    except FloatingPointError as exc:
-                        raise ValueError('Converted linear masses must be finite and positive') from exc
-                if not np.isfinite(linear_mass).all() or np.any(linear_mass <= 0):
-                    raise ValueError('Converted linear masses must be finite and positive')
-                masses[start:end] = linear_mass
+                zi = z[start:end]
+                m200m = mapping.log10_m200m(zi, lm[start:end], allow_extrapolation=allow_extrapolation)
+                for definition, dataset in masses.items():
+                    values = m200m if definition == '200m' else released_log10_m200c(zi, m200m)
+                    with np.errstate(over='raise', invalid='raise', under='ignore'):
+                        try:
+                            linear_mass = 10**values
+                        except FloatingPointError as exc:
+                            raise ValueError('Converted linear masses must be finite and positive') from exc
+                    if not np.isfinite(linear_mass).all() or np.any(linear_mass <= 0):
+                        raise ValueError('Converted linear masses must be finite and positive')
+                    dataset[start:end] = linear_mass

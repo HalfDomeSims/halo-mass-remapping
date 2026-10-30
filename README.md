@@ -1,7 +1,8 @@
 # HalfDome halo mass remapping
 
 Reproduce the purple RFoF / green calibrated halo mass-function figure from the
-HalfDome N-body paper, and apply the July 2024 RFoF-to-Tinker08 M200m calibration.
+HalfDome N-body paper, and apply the July 2024 RFoF-to-Tinker08 M200m calibration
+and the released M200m-to-M200c conversion.
 
 [HalfDome paper](https://arxiv.org/abs/2407.17462) ·
 [Public data](https://halfdomesims.github.io/data/)
@@ -9,6 +10,15 @@ HalfDome N-body paper, and apply the July 2024 RFoF-to-Tinker08 M200m calibratio
 The runnable notebook is **[HalfDome_mass_remapping.ipynb](HalfDome_mass_remapping.ipynb)**.
 It runs entirely from the small files included here. No NERSC connection,
 `nbodykit`, Aemulus emulator, or historical container is needed to run it.
+
+**M200c support added October 29, 2026:** use `mapping.log10_m200c(...)` or
+`run.py apply --mass-definition 200c` (choose `both` for both mass columns).
+The restored historical conversion passes all 36 tests and the executed
+notebook. On 76,980 independent seed-104 halos, the full RFoF→M200c chain agrees
+with released masses to within 4.27 ppm inside the calibrated range. See
+[M200c conversion](#m200c-conversion) for the method and historical unit
+convention, and [validation results](VALIDATION.md#m200c-extension--october-29-2026)
+for the measured errors and support limits.
 
 ## Method
 
@@ -21,6 +31,9 @@ mass-function analysis:
 * **Mass calibration:** a cubic spline fitted to released pairs of RFoF and
   calibrated masses, on a 70 × 65 grid in redshift and log mass. Independent
   validation and a conservative upper-mass support limit accompany the table.
+* **M200c:** the archived NFW/Bhattacharya13 conversion of calibrated M200m,
+  interpolated on the historical 200 × 30 grid. The small bundled table runs
+  with NumPy/SciPy; CCL is needed only to rebuild it.
 
 ![Reproduced paper HMF figure](figures/reproduced-HMF.png)
 
@@ -36,7 +49,7 @@ uv run python -m pytest -q
 
 Open `HalfDome_mass_remapping.ipynb` with the project's Python kernel, starting in
 the repository root. The notebook writes PNG/PDF figures under
-`~/projects/halfdome/recovered-remapping-20261027/validation/`; change `OUTPUT` to
+`validation/` in the repository; change `OUTPUT` to
 choose another destination. An executed copy is included.
 
 To fit the calibration table from the included released-catalog pairs:
@@ -58,6 +71,8 @@ mapping = MassRemapping.load("data/recovered-grid")
 # redshift and log10_m_rfof are aligned arrays from a halo catalog.
 log10_m200m = mapping.log10_m200m(redshift, log10_m_rfof)
 m200m = 10**log10_m200m  # Msun/h
+log10_m200c = mapping.log10_m200c(redshift, log10_m_rfof)
+m200c = 10**log10_m200c  # Msun/h, matching the released catalog convention
 ```
 
 The historical correction is applied to **log mass**:
@@ -79,11 +94,60 @@ new mass-only file with the same row order:
 ```bash
 uv run python run.py apply --grid data/recovered-grid \
   --input halos.hdf5 --output calibrated-masses.hdf5
+
+# Choose M200c, or write both aligned mass columns.
+uv run python run.py apply --grid data/recovered-grid \
+  --input halos.hdf5 --output calibrated-both.hdf5 --mass-definition both
 ```
 
 The input is read-only. Existing output files are not replaced. The sidecar
-contains `halo_mass_m200m` and attributes identifying its source, units, mapping
-provenance, and row alignment. Failed conversions leave no partial output.
+contains `halo_mass_m200m` by default. `--mass-definition 200c` writes
+`halo_mass_m200c`, and `both` writes both columns. Attributes identify the source,
+units, mapping and conversion provenance, and row alignment. Failed conversions
+leave no partial output.
+
+## M200c conversion
+
+The recovered July 24, 2024 inputs are archived in
+[`provenance/m200c-history.json`](provenance/m200c-history.json). They first apply
+the M200m calibration, then translate M200m to M200c with CCL's NFW mass
+translator and the **Bhattacharya13** concentration relation for M200m.
+This is a profile conversion, not a second abundance match to a M200c HMF.
+
+The historical interpolator is linear in `log10(M200m)` and `ln(1+z)` and
+returns `log10(M200c)`. Its grid covers log mass 12–16.5 and redshift 0–4.
+Those limits are enforced even when `allow_extrapolation=True` permits the
+RFoF spline's unvalidated continuation. For existing M200m masses alone:
+
+```python
+from mass_definition import released_log10_m200c
+
+log10_m200c = released_log10_m200c(redshift, np.log10(m200m))
+```
+
+The release code passed numeric Msun/h masses directly to CCL's Msun interface,
+without factors of h. This implementation preserves that historical convention
+to reproduce released masses. It is not a general physical mass converter.
+It also preserves the original float32 `ln(1+z)` arithmetic when given the
+stored float32 redshift column.
+
+The bundled table was rebuilt with a pinned modern CCL/CAMB environment; small
+differences from the original environment are measured against released pairs.
+The recipe, versions, and table hash are in
+[`data/m200c-conversion.json`](data/m200c-conversion.json). To rebuild and validate:
+
+```bash
+uv sync --frozen --extra notebook --extra test --extra conversion
+uv run python scripts/build_m200c_grid.py --output /tmp/m200c-conversion.npz
+uv run python scripts/validate_m200c.py \
+  --samples data/m200c-samples/release_samples.npz \
+  --output /tmp/m200c-validation.json
+```
+
+The checked-in M200c samples contain `(redshift, log10_m_rfof, log10_m200m,
+log10_m200c)`. They are validation inputs, not three-column `recover-grid`
+training inputs. Re-export them on NERSC with
+`scripts/sample_release.py --include-m200c --sample-seeds 102 104 --output NEW_DIRECTORY`.
 
 ## Calibration range and validation
 
@@ -106,8 +170,8 @@ extend to z=4. The historical code clamps to the grid boundaries; this is
 preserved. New input below the original mass range is rejected by default.
 
 `MassRemapping.load(directory)` accepts the three `conversion_grid*.npy` files
-with the same grid convention. The current mapper provides M200m. M200m→M200c
-conversion and fnl=20 production catalogs are outside the current validation.
+with the same grid convention. M200c adds the separately documented conversion
+table. The fnl=20 production catalogs are outside the current validation.
 
 ## Provenance
 

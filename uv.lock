@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -95,7 +95,7 @@ name = "cffi"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/ef/008a1939e372c06329a3fce4279c02f328488f3526744906eeec3da7ad5f/cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be", size = 530807, upload-time = "2026-08-03T21:21:18.939Z" }
 wheels = [
@@ -466,6 +466,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+conversion = [
+    { name = "pyccl" },
+]
 notebook = [
     { name = "ipykernel" },
     { name = "nbclient" },
@@ -485,10 +488,11 @@ requires-dist = [
     { name = "nbclient", marker = "extra == 'notebook'" },
     { name = "nbformat", marker = "extra == 'notebook'" },
     { name = "numpy", specifier = ">=2" },
+    { name = "pyccl", marker = "extra == 'conversion'", specifier = "==3.3.6" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "scipy", specifier = ">=1.15" },
 ]
-provides-extras = ["notebook", "test"]
+provides-extras = ["notebook", "test", "conversion"]
 
 [[package]]
 name = "hmf"
@@ -1149,6 +1153,26 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/da/9f/abfd2959e9261dd5217ca8551d4de211ca6ab26fe9b72cf44731ff6c4442/pure_eval-0.2.4.tar.gz", hash = "sha256:260c2774686e651b79f8b8e7fc9d80b3599ea6a66334b47d5f4abb69fc2c0ea1", size = 20563, upload-time = "2026-09-10T21:41:22.836Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6d/18/83376915176eb058cb86470eb7396388a13350b09a8f233a79303bbcbc5b/pure_eval-0.2.4-py3-none-any.whl", hash = "sha256:96cae060a313cfaad51bb761278bfb0e62dc0248d9315a81173752dc546cd37a", size = 11893, upload-time = "2026-09-10T21:41:21.532Z" },
+]
+
+[[package]]
+name = "pyccl"
+version = "3.3.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/76/dc091056f1af48e6cb56d651dac6eb8494dd2515547d9543c0ce5365b873/pyccl-3.3.6.tar.gz", hash = "sha256:fd6c0181381eb57345ec9b56bdcf9300c9a31a42014aa9c8ced95f31ace16795", size = 16790489, upload-time = "2026-07-28T09:29:17.738Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/09/9a/821afc748dadcd8f5bebda4b37ee9dab8f64c92b223e442d9898040714de/pyccl-3.3.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:957d9699b8ceec596e0f54932c185e7d1e953486e1e7445261306e8a2aa40d98", size = 3057423, upload-time = "2026-07-28T09:29:08.824Z" },
+    { url = "https://files.pythonhosted.org/packages/86/95/4183630d8e67133e5d066d388f3852580d4de8baa592506c28a80274e34c/pyccl-3.3.6-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b0077f51318c2f3112682d37febc75b4334152a8c8338dff19b484cdd25cf9a7", size = 3708004, upload-time = "2026-07-28T09:29:10.256Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/66/c64c214e680539e9dfa8266af7749a474cdefa81a3753ff887a2dfb5a7d3/pyccl-3.3.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f2221b1aeb88adae11168faeb798003893bdaec0a9c6c9e5385694aab52e5f25", size = 3057374, upload-time = "2026-07-28T09:29:11.808Z" },
+    { url = "https://files.pythonhosted.org/packages/af/86/df2caee376a298ceee5afd13c348371a2537d47aea30e5316d8fc6277004/pyccl-3.3.6-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4a943004beee16b72f4c1464008904127831b760f5c1906ea430f9bc92601380", size = 3707324, upload-time = "2026-07-28T09:29:13.224Z" },
+    { url = "https://files.pythonhosted.org/packages/99/09/6e545e891bf522fdee099dc8049d42589372550171f26593c8cc4bffabcd/pyccl-3.3.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:439472a5bd43a1fd332aa65e036ea20005297310b3c18bdf5f851ebbbd64038c", size = 3057855, upload-time = "2026-07-28T09:29:14.607Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/48/4eab47c2615543aa8d4d80e689659e35547824216e318aa0541ade69efff/pyccl-3.3.6-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6fa4f7e0fe17a90aea9fb981c586143ee41a846b2192f415bb995522adf26194", size = 3707307, upload-time = "2026-07-28T09:29:16.108Z" },
 ]
 
 [[package]]

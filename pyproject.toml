@@ -8,6 +8,7 @@ dependencies = ["numpy>=2", "scipy>=1.15", "h5py>=3.12", "matplotlib>=3.9", "ast
 [project.optional-dependencies]
 notebook = ["ipykernel", "nbclient", "nbformat"]
 test = ["pytest"]
+conversion = ["pyccl==3.3.6"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

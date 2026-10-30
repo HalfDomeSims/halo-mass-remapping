@@ -24,7 +24,7 @@ from remapping import MassRemapping, apply_hdf5, validate_pairs
 
 ROOT = Path.cwd()
 DATA = ROOT / "data"
-OUTPUT = Path.home() / "projects/halfdome/recovered-remapping-20261027/validation"
+OUTPUT = ROOT / "validation"
 OUTPUT.mkdir(parents=True, exist_ok=True)
 samples = np.load(DATA / "release_samples.npz")
 print("Released seeds:", samples["seeds"].tolist())'''),
@@ -56,26 +56,49 @@ example = example[example[:, 1] < 13.3][:20]
 predicted = mapping.log10_m200m(example[:, 0], example[:, 1])
 relative_error = np.expm1(np.log(10) * (predicted - example[:, 2]))
 print("Maximum relative mass error in example:", np.max(np.abs(relative_error)))'''),
+    nbf.v4.new_markdown_cell('''## Convert to M200c
+
+The July 2024 recipe converts calibrated M200m with an NFW profile and the
+Bhattacharya13 concentration relation. A bundled table reproduces that recipe
+without requiring CCL at runtime. This preserves the released numeric mass
+convention (no h rescaling at the historical CCL interface).
+
+Seed 104 supplies a separate check against the released M200c column. The
+conversion-only report isolates this new step; the full-chain report also
+includes the recovered RFoF calibration error.'''),
+    nbf.v4.new_code_cell('''from scripts.validate_m200c import validate
+from mass_definition import released_log10_m200c
+
+m200c_samples = np.load(DATA / "m200c-samples/release_samples.npz")
+print(json.dumps(validate(mapping, m200c_samples["sample_104"]), indent=2))
+
+# Use the actual float32 catalog redshift convention.
+z_example = example[:, 0].astype(np.float32)
+predicted_c = mapping.log10_m200c(z_example, example[:, 1])
+np.testing.assert_allclose(predicted_c, released_log10_m200c(z_example, predicted))
+print("M200c / M200m:", 10**(predicted_c - predicted))'''),
     nbf.v4.new_markdown_cell('''## Write an aligned HDF5 mass sidecar
 
 This demonstration uses a temporary 20-row catalog. Real inputs need `redshift`
 and `log10_m_rfof` (or the historical `log10_m`) in the same row order.
-The output is a new HDF5 file containing `halo_mass_m200m` in solar masses/h,
+The output is a new HDF5 file containing `halo_mass_m200m` and `halo_mass_m200c` in solar masses/h,
 plus source, units, mapping provenance, and row-alignment attributes. Existing
 catalogs are never opened for writing.'''),
     nbf.v4.new_code_cell('''with tempfile.TemporaryDirectory(prefix="halfdome-example-") as temporary:
     source = Path(temporary) / "input.h5"
-    destination = Path(temporary) / "m200m.h5"
+    destination = Path(temporary) / "both-masses.h5"
     with h5py.File(source, "w") as f:
-        f["redshift"] = example[:, 0]
+        f["redshift"] = z_example
         f["log10_m_rfof"] = example[:, 1]
-    apply_hdf5(mapping, source, destination, chunk_size=7)
+    apply_hdf5(mapping, source, destination, chunk_size=7, mass_definition="both")
     with h5py.File(destination, "r") as f:
         np.testing.assert_allclose(f["halo_mass_m200m"][:], 10**predicted)
+        np.testing.assert_allclose(f["halo_mass_m200c"][:], 10**predicted_c)
         print("Sidecar rows:", len(f["halo_mass_m200m"]))
         print("Units:", f.attrs["units"])'''),
     nbf.v4.new_markdown_cell('''The README records commands, data provenance, and the validated calibration
-range. This mapper provides M200m; M200m→M200c conversion is outside its scope.'''),
+range. Both M200m and M200c are available; the paper HMF figure above retains
+its original M200m definition.'''),
 ]
 nb.metadata.kernelspec = {'display_name': 'Python 3', 'language': 'python', 'name': 'python3'}
 nbf.write(nb, root / 'HalfDome_mass_remapping.ipynb')

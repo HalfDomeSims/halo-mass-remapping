@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import pytest
 
 from scripts.sample_release import EDGES, Z_LEFT, descending_bound, histograms, stratified_sample
 
@@ -22,12 +23,16 @@ def test_small_catalog_slices_match_direct_selection(tmp_path):
                 assert descending_bound(f['redshift'], threshold, strict) == expected
 
 
-def test_stratified_reservoir_is_independent_of_chunk_boundaries(tmp_path):
+@pytest.mark.parametrize('include_m200c', [False, True])
+def test_stratified_reservoir_is_independent_of_chunk_boundaries(tmp_path, include_m200c):
     rng = np.random.default_rng(2)
     z = np.sort(rng.uniform(0, 4, 2000))[::-1]
     lm = rng.uniform(13, 13.1, len(z))
     with h5py.File(tmp_path/'input.h5', 'w') as f:
         f['redshift'], f['log10_m_rfof'], f['halo_mass_m200m'] = z, lm, 10**lm
-        a = stratified_sample(f, per_bin=3, chunk_size=113, seed=71)
-        b = stratified_sample(f, per_bin=3, chunk_size=2000, seed=71)
+        f['halo_mass_m200c'] = 10**(lm - .1 - .01*z)
+        a = stratified_sample(f, per_bin=3, chunk_size=113, seed=71, include_m200c=include_m200c)
+        b = stratified_sample(f, per_bin=3, chunk_size=2000, seed=71, include_m200c=include_m200c)
         np.testing.assert_array_equal(a, b)
+        if include_m200c:
+            np.testing.assert_allclose(a[:, 3], a[:, 2] - .1 - .01*a[:, 0], rtol=1e-14)

@@ -29,18 +29,20 @@ def descending_bound(dataset, value, strict=False):
     return lo
 
 
-def stratified_sample(f, per_bin=32, chunk_size=1_000_000, seed=0, min_log_mass=None):
+def stratified_sample(f, per_bin=32, chunk_size=1_000_000, seed=0, min_log_mass=None,
+                      include_m200c=False):
     if not isinstance(per_bin, (int, np.integer)) or per_bin <= 0:
         raise ValueError('Samples per bin must be a positive integer')
     if not isinstance(chunk_size, (int, np.integer)) or chunk_size <= 0:
         raise ValueError('Chunk size must be a positive integer')
     rng = np.random.default_rng(seed)
-    kept = np.empty((0, 5), dtype=np.float64)
+    kept = np.empty((0, 6 if include_m200c else 5), dtype=np.float64)
     for start in range(0, len(f['redshift']), chunk_size):
         end = start + chunk_size
         z = f['redshift'][start:end].astype(float)
         lm = f['log10_m_rfof'][start:end].astype(float)
-        target = np.log10(f['halo_mass_m200m'][start:end])
+        fields = ['halo_mass_m200m', 'halo_mass_m200c'] if include_m200c else ['halo_mass_m200m']
+        target = np.column_stack([np.log10(f[field][start:end]) for field in fields])
         if min_log_mass is not None:
             select = lm >= min_log_mass
             z, lm, target = z[select], lm[select], target[select]
@@ -96,6 +98,8 @@ def main():
     p.add_argument('--sample-seeds', type=int, nargs='+', default=[100, 102])
     p.add_argument('--per-bin', type=int, default=32)
     p.add_argument('--min-sample-log-mass', type=float)
+    p.add_argument('--include-m200c', action='store_true',
+                   help='Append released log10(M200c) as a fourth paired-sample column')
     args = p.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
     start = time.monotonic()
@@ -109,7 +113,8 @@ def main():
             raw.append(r)
             calibrated.append(c)
             if seed in args.sample_seeds:
-                sample = stratified_sample(f, args.per_bin, seed=seed, min_log_mass=args.min_sample_log_mass)
+                sample = stratified_sample(f, args.per_bin, seed=seed, min_log_mass=args.min_sample_log_mass,
+                                           include_m200c=args.include_m200c)
                 arrays[f'sample_{seed}'] = sample
                 print(f'seed {seed}: {len(sample)} stratified pairs', flush=True)
             records.append({'seed': seed, 'path': str(path), 'size': stat.st_size,
@@ -119,7 +124,10 @@ def main():
     np.savez_compressed(args.output / 'release_samples.npz', **arrays,
                         seeds=seeds, log_mass_edges=EDGES, z_left=Z_LEFT,
                         raw_counts=raw, calibrated_counts=calibrated)
-    metadata = {'catalogs': records, 'sample_columns': ['redshift', 'log10_m_rfof', 'log10_m200m'],
+    columns = ['redshift', 'log10_m_rfof', 'log10_m200m']
+    if args.include_m200c:
+        columns.append('log10_m200c')
+    metadata = {'catalogs': records, 'sample_columns': columns,
                 'sample_per_bin': args.per_bin, 'particle_mass': M0 * 1e10,
                 'sample_seeds': args.sample_seeds, 'min_sample_log_mass': args.min_sample_log_mass,
                 'elapsed_seconds': time.monotonic()-start}

@@ -1,0 +1,41 @@
+{
+  "method": "historical_CCL_recipe_rebuilt_with_pinned_modern_CCL",
+  "source_history": "provenance/m200c-history.json",
+  "history_sha256": "a0def8dfd99c479ef5d11197c3850d783d286067d3336e70b81dc1eecdf38798",
+  "source_session": 749,
+  "source_line": 96,
+  "source_date": "2024-07-24",
+  "cosmology": {
+    "Omega_c": 0.2603,
+    "Omega_b": 0.0486,
+    "h": 0.6774,
+    "sigma8": 0.8159,
+    "n_s": 0.9667,
+    "transfer_function": "boltzmann_camb"
+  },
+  "profile": "NFW",
+  "concentration": "Bhattacharya13",
+  "mass_in": "200m",
+  "mass_out": "200c",
+  "mass_convention": "Released numeric Msun/h masses passed directly to CCL Msun interface; no h rescaling",
+  "interpolation": "linear in log10(M200m) and ln(1+z), returning log10(M200c)",
+  "grid_shape": [
+    200,
+    30
+  ],
+  "redshift_range": [
+    0,
+    4
+  ],
+  "log10_mass_range": [
+    12,
+    16.5
+  ],
+  "versions": {
+    "pyccl": "3.3.6",
+    "camb": "2.0.5",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "table_sha256": "1ecc365e9bab23c566253936ad4a82a97b61c7cdecc62760f2a0f2b8425fecfe"
+}

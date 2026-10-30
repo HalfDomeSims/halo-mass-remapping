@@ -25,6 +25,8 @@ def main():
     apply.add_argument('--input', type=Path, required=True)
     apply.add_argument('--output', type=Path, required=True)
     apply.add_argument('--allow-extrapolation', action='store_true')
+    apply.add_argument('--mass-definition', choices=['200m', '200c', 'both'], default='200m',
+                       help='Output mass definition (default: 200m)')
     args = p.parse_args()
     if args.command == 'recover-grid':
         data = np.load(args.samples)
@@ -58,7 +60,7 @@ def main():
         print(plot_release(args.samples, args.output))
     elif args.command == 'apply':
         apply_hdf5(MassRemapping.load(args.grid), args.input, args.output,
-                   allow_extrapolation=args.allow_extrapolation)
+                   allow_extrapolation=args.allow_extrapolation, mass_definition=args.mass_definition)
         print(args.output)
 
 
